@@ -8,8 +8,9 @@ import 'package:merge_map/merge_map.dart';
 class WeatherRepo{
 
   Future<WeatherModel> getWeather(City city) async{
-
-    final result = await http.Client().get("https://api.openweathermap.org/data/2.5/weather?id=${city.id}&APPID=eb4fdd6ba32007915f8e4ff410e33e52");
+    
+    String openWeatherAPI = ""; //Todo: Add your Open Weather API here
+    final result = await http.Client().get(openWeatherAPI); 
 
     if(result.statusCode != 200)
       throw Exception();
