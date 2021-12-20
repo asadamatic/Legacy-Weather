@@ -3,12 +3,14 @@ import 'package:flare_flutter/flare_actor.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:legacyweather/DataModels/CityData.dart';
-import 'package:legacyweather/LocalDatabase/LocalDatabase.dart';
-import 'package:provider/provider.dart';
+import 'package:get/get.dart';
+import 'package:legacyweather/constants/values.dart';
+import 'package:legacyweather/controllers/weather_controller.dart';
+import 'package:legacyweather/data_models/city.dart';
+import 'package:legacyweather/local_database/local_database.dart';
 
 class LocationSelector extends StatefulWidget {
-  final Function selectScreen;
+  final Function? selectScreen;
   LocationSelector({this.selectScreen});
 
   @override
@@ -16,34 +18,34 @@ class LocationSelector extends StatefulWidget {
 }
 
 class _LocationSelectorState extends State<LocationSelector> {
-
-  Future<List<City>> future;
-  List<City> cities = List();
-  List<City> filteredList = List();
+  Future<List<City>?>? future;
+  List<City>? cities = [];
+  List<City>? filteredList = [];
   TextEditingController searchController = TextEditingController();
 
-  void clearSearch(){
+  final WeatherController _weatherController = Get.find();
 
+  void clearSearch() {
     setState(() {
-
       searchController.clear();
       filteredList = cities;
     });
   }
-  void filterData(search){
 
+  void filterData(search) {
     setState(() {
-      if (search.isEmpty){
-
+      if (search.isEmpty) {
         filteredList = cities;
-      }else{
+      } else {
         filteredList = cities;
-        List<City> temporaryList = List();
+        List<City> temporaryList = [];
 
-        for (int index = 0; index < filteredList.length; index++){
-
-          if (filteredList[index].name.toLowerCase().contains(search.toLowerCase())){
-            temporaryList.add(filteredList[index]);
+        for (int index = 0; index < filteredList!.length; index++) {
+          if (filteredList![index]
+              .name!
+              .toLowerCase()
+              .contains(search.toLowerCase())) {
+            temporaryList.add(filteredList![index]);
           }
         }
         filteredList = temporaryList;
@@ -57,24 +59,26 @@ class _LocationSelectorState extends State<LocationSelector> {
     super.initState();
     future = getCityList();
   }
+
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
-          statusBarColor: Theme.of(context).primaryColor,
-          statusBarBrightness: Brightness.dark,
-          statusBarIconBrightness: Brightness.light,
+        statusBarColor: Theme.of(context).primaryColor,
+        statusBarBrightness: Brightness.dark,
+        statusBarIconBrightness: Brightness.light,
       ),
       child: Scaffold(
         appBar: AppBar(
-          brightness: Brightness.dark,
           centerTitle: true,
           title: Text('Choose Location'),
+          systemOverlayStyle: SystemUiOverlayStyle.light,
+          backgroundColor: primaryColor,
         ),
         body: FutureBuilder(
-          future:  future,
-          builder: (context, snapshot) {
-              if (snapshot.hasData){
+            future: future,
+            builder: (context, snapshot) {
+              if (snapshot.hasData) {
                 return Column(
                   children: <Widget>[
                     Card(
@@ -92,14 +96,22 @@ class _LocationSelectorState extends State<LocationSelector> {
                                   hintText: 'Search for your city',
                                   border: InputBorder.none,
                                 ),
-                                onChanged: (queryText){
+                                onChanged: (queryText) {
                                   filterData(queryText);
                                 },
                               ),
                             ),
                             GestureDetector(
-                              child: Text('Clear', style: TextStyle(color: Theme.of(context).primaryColor.withOpacity(.8), fontWeight: FontWeight.w700, letterSpacing: .8),),
-                              onTap: (){
+                              child: Text(
+                                'Clear',
+                                style: TextStyle(
+                                    color: Theme.of(context)
+                                        .primaryColor
+                                        .withOpacity(.8),
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: .8),
+                              ),
+                              onTap: () {
                                 clearSearch();
                               },
                             )
@@ -111,25 +123,34 @@ class _LocationSelectorState extends State<LocationSelector> {
                       child: ListView.builder(
                           itemCount: filteredList?.length ?? 0,
                           itemBuilder: (BuildContext context, int index) {
-                            return FlatButton(
-                              onPressed: (){
-
-                                widget.selectScreen != null ?
-                                addCity(filteredList[index]) : addNewCity(filteredList[index]);
+                            return TextButton(
+                              onPressed: () {
+                                widget.selectScreen != null
+                                    ? addCity(filteredList![index])
+                                    : addNewCity(filteredList![index]);
                               },
                               child: Container(
-                                child: Text(filteredList[index].name, style: TextStyle(fontSize: 20.0, color: Color(0xff01286a).withOpacity(.6),)),
+                                child: Text(
+                                    '${filteredList![index].name!}, ${filteredList![index].country!}',
+                                    style: TextStyle(
+                                      fontSize: 20.0,
+                                      color: Color(0xff01286a).withOpacity(.6),
+                                    )),
                                 padding: const EdgeInsets.all(15.0),
                               ),
                             );
-                          }
-                      ),
+                          }),
                     ),
                   ],
                 );
               }
-              return Center(child: Container(
-                child: FlareActor("Assets/WorldSpin.flr", fit: BoxFit.contain, animation: "roll",),
+              return Center(
+                  child: Container(
+                child: FlareActor(
+                  "Assets/WorldSpin.flr",
+                  fit: BoxFit.contain,
+                  animation: "roll",
+                ),
                 height: 200,
                 width: 200,
               ));
@@ -138,29 +159,23 @@ class _LocationSelectorState extends State<LocationSelector> {
     );
   }
 
-  void addCity(City city) async{
-
-    await Provider.of<LocalDatabaseCity>(context, listen: false).insertData(city);
-
-    widget.selectScreen();
+  void addCity(City city) async {
+    await _weatherController.addCity(city);
+    widget.selectScreen!();
   }
 
-  void addNewCity(City city) async{
-
-    await Provider.of<LocalDatabaseCity>(context, listen: false).insertData(city);
+  void addNewCity(City city) async {
+    await _weatherController.addCity(city);
     Navigator.of(context).pop();
   }
-  City fromJson(Map<String, dynamic> json) {
 
-    return City(
-      id: json['id'],
-      name: json['name'],
-    );
+  City fromJson(Map<String, dynamic> json) {
+    return City(id: json['id'], name: json['name'], country: json['country']);
   }
 
-  Future<List<City>> getCityList () async{
-
-    final response = await DefaultAssetBundle.of(context).loadString('Assets/citylist.json');
+  Future<List<City>?> getCityList() async {
+    final response =
+        await DefaultAssetBundle.of(context).loadString('Assets/citylist.json');
     final decoded = await customCompute(response);
     setState(() {
       cities = decoded.map<City>((json) => fromJson(json)).toList();
@@ -169,9 +184,7 @@ class _LocationSelectorState extends State<LocationSelector> {
     return decoded.map<City>((json) => fromJson(json)).toList();
   }
 
-  customCompute(String response) async{
-
+  customCompute(String response) async {
     return await compute(jsonDecode, response);
   }
 }
-
